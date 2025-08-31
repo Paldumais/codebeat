@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeBeat - A Coded Beat Maker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); background-color: #6366f1; }
+            50% { transform: scale(1.2); background-color: #a5b4fc; }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes note-flash {
+            0%, 100% { background-color: #a5b4fc; box-shadow: 0 0 7px 2px #a5b4fc44; }
+            50% { background-color: #4f46e5; box-shadow: 0 0 15px 4px #a5b4fc77; }
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #030712;
+            background-image: radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.1) 0px, transparent 50%),
+                              radial-gradient(at 97% 21%, hsla(23, 98%, 61%, 0.1) 0px, transparent 50%),
+                              radial-gradient(at 70% 94%, hsla(333, 98%, 61%, 0.1) 0px, transparent 50%);
+        }
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+        .glass-pane {
+            background-color: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(55, 65, 81, 0.5);
+            transition: background-color 0.3s ease;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        ::selection { background: #4f46e5; color: white; }
+        .bpm-pulse-indicator.playing { animation: pulse 1s infinite; }
+        #progress-caret {
+            transition: transform 0.05s linear;
+            box-shadow: 0 0 15px 3px rgba(165, 180, 252, 0.7);
+        }
+        .animated-entry { animation: fadeInUp 0.5s ease-out forwards; }
+        .note-indicator { transition: background-color 0.1s ease, box-shadow 0.1s ease; }
+        .note-indicator.active { animation: note-flash 0.1s ease-out; }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 99px; background: #a5b4fc; cursor: pointer; margin-top: -6px; border: 2px solid #312e81; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: #374151; border-radius: 99px; }
+    </style>
+</head>
+<body class="h-full text-gray-300 flex flex-col antialiased">
+
+    <main class="w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
+        <!-- Left Column: Controls & Info -->
+        <div class="lg:col-span-2 flex flex-col gap-6 w-full h-full">
+            <header class="animated-entry" style="animation-delay: 100ms;">
+                <h1 class="text-4xl font-bold text-white tracking-tight">Code<span class="text-indigo-400">Beat</span></h1>
+                <p class="text-gray-400 mt-1">Craft generative rhythms with code.</p>
+            </header>
+            
+            <!-- Instructions -->
+            <div id="accordion-container" class="glass-pane rounded-2xl overflow-hidden animated-entry" style="animation-delay: 200ms;">
+                <div class="p-6">
+                    <h2 class="text-xl font-bold text-white mb-4">How to Code</h2>
+                    <div class="space-y-2 text-gray-300">
+                        <div class="accordion-item border-t border-gray-700">
+                            <button class="accordion-header w-full flex justify-between items-center py-3 text-left font-semibold text-indigo-400">
+                                <span>Basic Sequencing</span>
+                                <svg class="w-5 h-5 transition-transform transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="accordion-content pb-2">
+                                <ul class="list-none mt-2 space-y-2 text-sm pl-2">
+                                    <li><code class="font-mono bg-gray-700 px-1 rounded-sm">1-9</code> : Hit with velocity (1=soft, 9=hard).</li>
+                                    <li><code class="font-mono bg-gray-700 px-1 rounded-sm">-</code> or <code class="font-mono bg-gray-700 px-1 rounded-sm">.</code> : Rest (silence).</li>
+                                    <li><code class="font-mono bg-gray-700 px-1 rounded-sm">C4:8</code>: Plays note C4 as an 8th note.</li>
+                                    <li><code class="font-mono bg-gray-700 px-1 rounded-sm">A3</code>: Plays note A3 as a 16th note (default).</li>
+                                </ul>
+                            </div>
+                        </div>
+                         <div class="accordion-item border-t border-gray-700">
+                             <button class="accordion-header w-full flex justify-between items-center py-3 text-left font-semibold text-indigo-400">
+                                <span>Dynamic & Generative Sequencing</span>
+                                <svg class="w-5 h-5 transition-transform transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </button>
+                            <div class="accordion-content pb-2">
+                                 <ul class="list-none mt-2 space-y-2 text-sm pl-2">
+                                     <li><code class="font-mono bg-gray-700 px-1 rounded-sm">?</code>: 50% chance to play the previous step.</li>
+                                     <li><code class="font-mono bg-gray-700 px-1 rounded-sm">?3</code>: 30% chance to play the previous step. (1-9)</li>
+                                     <li><code class="font-mono bg-gray-700 px-1 rounded-sm">(C4|E4|G4)</code>: Plays C4, E4, or G4 at random.</li>
+                                     <li><span class="italic text-gray-400">e.g.,</span> <code class="font-mono bg-gray-700 px-1 rounded-sm">kick: 9--5?2--9--5?8</code></li>
+                                 </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-pane p-6 rounded-2xl animated-entry flex flex-col sm:flex-row gap-4 items-center" style="animation-delay: 300ms;">
+                 <div class="w-full">
+                     <label for="preset-selector" class="text-sm font-medium text-gray-400 mb-2 block">Presets</label>
+                     <select id="preset-selector" class="w-full bg-gray-800/50 border border-gray-700 rounded-lg p-2.5 focus:ring-indigo-500 focus:border-indigo-500 transition"></select>
+                 </div>
+                 <div class="w-full sm:w-auto pt-0 sm:pt-7">
+                     <button id="save-button" class="w-full sm:w-auto bg-indigo-600/80 hover:bg-indigo-600 text-white font-semibold px-4 py-2.5 rounded-lg transition duration-200 shadow-lg shadow-indigo-600/20">Save</button>
+                 </div>
+            </div>
+
+            <div class="glass-pane p-6 rounded-2xl animated-entry" style="animation-delay: 400ms;">
+                <div class="flex flex-col gap-6">
+                    <div>
+                        <h3 class="text-base font-bold text-white mb-3">Master Controls</h3>
+                        <div class="flex flex-col sm:flex-row gap-6 items-center justify-between">
+                            <button id="play-button" class="w-full sm:w-32 h-14 flex items-center justify-center bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-900 focus:ring-indigo-500 transform hover:scale-105 active:scale-100 shadow-lg shadow-indigo-600/30">
+                                <svg id="play-icon" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M4.018 14.385A1.75 1.75 0 006.25 16h7.5a1.75 1.75 0 001.75-1.75V5.75A1.75 1.75 0 0013.75 4h-7.5A1.75 1.75 0 004.5 5.75v8.25c0 .142.017.281.05.417zM6.25 5.5A.75.75 0 017 4.75h6A.75.75 0 0113.75 5.5v9a.75.75 0 01-.75.75h-6A.75.75 0 016.25 14.5v-9zM8 8a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" /><path d="M5.505 14.802A1.75 1.75 0 014 13.25V6.75a1.75 1.75 0 011.75-1.75h8.5A1.75 1.75 0 0116 6.75v6.5a1.75 1.75 0 01-1.495 1.734l-.005.001h-8.505zM5.75 6.5A.75.75 0 005 7.25v5.5a.75.75 0 00.75.75h8.5a.75.75 0 00.75-.75v-5.5a.75.75 0 00-.75-.75h-8.5z" clip-rule="evenodd" /></svg>
+                                <span id="play-text" class="text-xl ml-2">Play</span>
+                            </button>
+                            <div class="flex items-center space-x-4 w-full sm:w-auto">
+                                <div class="bpm-pulse-indicator w-3 h-3 rounded-full"></div>
+                                <div class="flex-grow">
+                                     <label for="tempo-slider" class="text-sm font-medium text-gray-400 mb-2 block">BPM</label>
+                                     <input id="tempo-slider" type="range" min="40" max="240" value="120" class="w-full cursor-pointer">
+                                </div>
+                                <span id="tempo-display" class="text-lg font-mono bg-gray-800/50 border border-gray-700 px-3 py-2 rounded-lg w-16 text-center">120</span>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label for="swing-slider" class="text-sm font-medium text-gray-400">Swing</label>
+                            <input id="swing-slider" type="range" min="0" max="100" value="0" class="w-full cursor-pointer mt-1">
+                        </div>
+                    </div>
+                     <div class="border-t border-gray-700 pt-4">
+                        <h3 class="text-base font-bold text-white mb-3">Synth Engine</h3>
+                         <div id="waveform-selector" class="grid grid-cols-4 gap-2">
+                             <button data-wave="fatsawtooth" class="wave-button bg-indigo-600 text-white p-2 rounded-lg text-sm transition">Saw</button>
+                             <button data-wave="square" class="wave-button bg-gray-700/80 hover:bg-gray-700 p-2 rounded-lg text-sm transition">Square</button>
+                             <button data-wave="sine" class="wave-button bg-gray-700/80 hover:bg-gray-700 p-2 rounded-lg text-sm transition">Sine</button>
+                             <button data-wave="triangle" class="wave-button bg-gray-700/80 hover:bg-gray-700 p-2 rounded-lg text-sm transition">Triangle</button>
+                         </div>
+                     </div>
+                     <div class="border-t border-gray-700 pt-4 space-y-3">
+                        <h3 class="text-base font-bold text-white">Master Effects</h3>
+                        <div>
+                            <label for="reverb-slider" class="text-sm font-medium text-gray-400">Reverb</label>
+                            <input id="reverb-slider" type="range" min="0" max="100" value="30" class="w-full cursor-pointer mt-1">
+                        </div>
+                        <div>
+                            <label for="delay-slider" class="text-sm font-medium text-gray-400">Delay</label>
+                            <input id="delay-slider" type="range" min="0" max="100" value="20" class="w-full cursor-pointer mt-1">
+                        </div>
+                        <div>
+                            <label for="filter-cutoff-slider" class="text-sm font-medium text-gray-400">Filter Cutoff</label>
+                            <input id="filter-cutoff-slider" type="range" min="0" max="100" value="100" class="w-full cursor-pointer mt-1">
+                        </div>
+                        <div>
+                            <label for="filter-resonance-slider" class="text-sm font-medium text-gray-400">Filter Resonance</label>
+                            <input id="filter-resonance-slider" type="range" min="0" max="100" value="0" class="w-full cursor-pointer mt-1">
+                        </div>
+                     </div>
+                </div>
+            </div>
+
+            <footer class="mt-auto text-center text-xs text-gray-500 animated-entry" style="animation-delay: 500ms;">
+                <p>Copyright &copy; 2025 <a href="https://pxlbase.com" target="_blank" rel="noopener noreferrer" class="underline hover:text-indigo-400 transition-colors">Pierre-Alexandre Lévesque Dumais</a></p>
+            </footer>
+        </div>
+
+        <!-- Right Column: Editor -->
+        <div class="lg:col-span-3 glass-pane rounded-2xl shadow-inner flex flex-col overflow-hidden h-full min-h-[500px] lg:min-h-0 lg:h-[calc(100vh-4rem)] animated-entry" style="animation-delay: 500ms;">
+            <div class="flex-grow flex">
+                <div id="instrument-indicators" class="p-4 pt-8 space-y-2 bg-gray-900/30"></div>
+                <div class="relative flex-grow">
+                    <div id="progress-container" class="absolute top-0 left-0 w-full h-8 pointer-events-none p-4">
+                        <div id="progress-caret" class="w-1 h-4 bg-indigo-300 rounded-full opacity-75"></div>
+                    </div>
+                    <textarea id="code-editor" class="w-full h-full p-4 pt-8 bg-transparent font-mono text-base text-gray-300 resize-none leading-relaxed focus:outline-none" spellcheck="false" wrap="off"></textarea>
+                 </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        class CodeBeat {
+            constructor() {
+                this.elements = {
+                    codeEditor: document.getElementById('code-editor'),
+                    playButton: document.getElementById('play-button'),
+                    playText: document.getElementById('play-text'),
+                    playIcon: document.getElementById('play-icon'),
+                    tempoSlider: document.getElementById('tempo-slider'),
+                    tempoDisplay: document.getElementById('tempo-display'),
+                    progressCaret: document.getElementById('progress-caret'),
+                    pulseIndicator: document.querySelector('.bpm-pulse-indicator'),
+                    presetSelector: document.getElementById('preset-selector'),
+                    saveButton: document.getElementById('save-button'),
+                    waveformSelector: document.getElementById('waveform-selector'),
+                    reverbSlider: document.getElementById('reverb-slider'),
+                    delaySlider: document.getElementById('delay-slider'),
+                    swingSlider: document.getElementById('swing-slider'),
+                    filterCutoffSlider: document.getElementById('filter-cutoff-slider'),
+                    filterResonanceSlider: document.getElementById('filter-resonance-slider'),
+                    instrumentIndicators: document.getElementById('instrument-indicators'),
+                    accordionContainer: document.getElementById('accordion-container'),
+                };
+
+                this.state = {
+                    isPlaying: false,
+                    isInitialized: false,
+                    sequences: new Map(),
+                    synths: {},
+                    effects: {},
+                };
+
+                this.stopIconSVG = `<svg id="stop-icon" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M6.25 5A1.25 1.25 0 005 6.25v7.5A1.25 1.25 0 006.25 15h7.5A1.25 1.25 0 0015 13.75v-7.5A1.25 1.25 0 0013.75 5h-7.5zM6.5 6.5h7v7h-7v-7z" /></svg>`;
+                this.playIconSVG = this.elements.playIcon.innerHTML;
+
+                this.presets = {
+                    funk: `-- Modern Funk --\n-- Instruments: kick, snare, hihat, tom, synth, bass --\n\nkick: 9-.7-..7.9-7.7..\nsnare:....9...----9...\nhihat:*-*-*-*-*-*-*-*-\ntom: ..............o.\nsynth:C4:16-.G4:16-.A#4:16-C5:16-\nbass: C2---G2---A#2--C3---`,
+                    trap: `-- Trap Beat --\n\nkick: 9---7---9-7-9---\nsnare:----9-------9---\nhihat:*-*-*-*?*-*-*-*?*-\nsynth:G4:8--F4:8--D#4:8--C4:8\nbass: G1:4----G1:4----`,
+                    generative: `-- Generative Melody --\n\nkick: 9--5?3--9--5?8--\nsnare:----9?6-------9?4-\nhihat:*-*?*-*?*-*?*-*?*-\nsynth:(C4|D4|E4|G4|A4)--(C4|D4|E4|G4|A4)--(C4|D4|E4|G4|A4)--(C4|D4|E4|G4|A4)-\nbass: C2:2------G1:2------`,
+                    house: `-- House Groove --\n\nkick: 9-5-9-5-9-5-9-5\nsnare:----9-------9---\nhihat:--7---7---7---7-\nsynth:C3-E3-G3-B3-C4-B3-G3-E3\nbass: C2:16-C2:16-C2:16-C2:16-C2:16-C2:16-C2:16-C2:16`,
+                };
+                
+                this.init();
+            }
+
+            init() {
+                this.populatePresets();
+                this.setupEventListeners();
+                this.loadPreset('funk');
+                this.updateTempo();
+            }
+            
+            populatePresets() {
+                for (const key in this.presets) {
+                    const option = new Option(key.charAt(0).toUpperCase() + key.slice(1), key);
+                    this.elements.presetSelector.add(option);
+                }
+                if (localStorage.getItem('codebeat_custom')) {
+                    this.elements.presetSelector.add(new Option('Custom Beat', 'custom'));
+                }
+            }
+
+            setupAudio() {
+                // Master Effects Chain: Filter -> Reverb -> Delay -> Destination
+                this.state.effects.filter = new Tone.Filter(20000, "lowpass");
+                this.state.effects.reverb = new Tone.Reverb(2.5);
+                this.state.effects.delay = new Tone.PingPongDelay("8n", 0.2);
+                this.state.effects.filter.chain(this.state.effects.reverb, this.state.effects.delay, Tone.Destination);
+                const masterBus = this.state.effects.filter;
+
+                this.state.synths = {
+                    kick: new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 10, oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4, attackCurve: "exponential" } }).connect(masterBus),
+                    snare: new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0 } }).connect(masterBus),
+                    hihat: new Tone.MetalSynth({ frequency: 300, envelope: { attack: 0.001, decay: 0.1, release: 0.01 }, harmonicity: 5.1, modulationIndex: 32, resonance: 4000, octaves: 1.5 }).connect(masterBus),
+                    tom: new Tone.MembraneSynth({ pitchDecay: 0.1, octaves: 4 }).connect(masterBus),
+                    synth: new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'fatsawtooth' }, envelope: { attack: 0.02, decay: 0.3, sustain: 0.6, release: 1 } }).connect(masterBus),
+                    bass: new Tone.MonoSynth({ oscillator: { type: 'fmsquare' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.4, release: 0.8 } }).connect(masterBus),
+                };
+                
+                this.updateEffects();
+                this.state.isInitialized = true;
+            }
+
+            setupEventListeners() {
+                this.elements.playButton.addEventListener('click', () => this.togglePlayback());
+                this.elements.tempoSlider.addEventListener('input', () => this.updateTempo());
+                this.elements.swingSlider.addEventListener('input', () => this.updateSwing());
+                this.elements.presetSelector.addEventListener('change', (e) => this.loadPreset(e.target.value));
+                this.elements.saveButton.addEventListener('click', () => this.saveCustomPreset());
+                this.elements.reverbSlider.addEventListener('input', () => this.updateEffects());
+                this.elements.delaySlider.addEventListener('input', () => this.updateEffects());
+                this.elements.filterCutoffSlider.addEventListener('input', () => this.updateEffects());
+                this.elements.filterResonanceSlider.addEventListener('input', () => this.updateEffects());
+                
+                this.elements.waveformSelector.addEventListener('click', (e) => {
+                    const button = e.target.closest('.wave-button');
+                    if (button && this.state.isInitialized) this.updateWaveform(button);
+                });
+
+                this.elements.accordionContainer.addEventListener('click', (e) => {
+                    const header = e.target.closest('.accordion-header');
+                    if (header) this.toggleAccordion(header);
+                });
+            }
+            
+            toggleAccordion(header) {
+                const content = header.nextElementSibling;
+                const icon = header.querySelector('svg');
+                const isExpanded = content.style.maxHeight && content.style.maxHeight !== '0px';
+
+                document.querySelectorAll('.accordion-content').forEach(el => el.style.maxHeight = null);
+                document.querySelectorAll('.accordion-header svg').forEach(el => el.style.transform = 'rotate(0deg)');
+
+                if (!isExpanded) {
+                    content.style.maxHeight = content.scrollHeight + "px";
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            }
+
+            loadPreset(name) {
+                let code = name === 'custom' ? localStorage.getItem('codebeat_custom') : this.presets[name];
+                if (code) {
+                    this.elements.codeEditor.value = code;
+                    if (this.state.isPlaying) this.parseAndPlay();
+                }
+            }
+
+            saveCustomPreset() {
+                localStorage.setItem('codebeat_custom', this.elements.codeEditor.value);
+                if (![...this.elements.presetSelector.options].some(o => o.value === 'custom')) {
+                     this.elements.presetSelector.add(new Option('Custom Beat', 'custom'));
+                }
+                this.elements.presetSelector.value = 'custom';
+            }
+
+            updateTempo() {
+                const bpm = parseInt(this.elements.tempoSlider.value, 10);
+                this.elements.tempoDisplay.textContent = bpm;
+                this.elements.pulseIndicator.style.animationDuration = `${60 / bpm}s`;
+                if (this.state.isInitialized) Tone.Transport.bpm.value = bpm;
+            }
+            
+            updateSwing() {
+                if(this.state.isInitialized) {
+                    Tone.Transport.swing = parseInt(this.elements.swingSlider.value) / 100;
+                }
+            }
+
+            updateWaveform(button) {
+                const newWave = button.dataset.wave;
+                this.state.synths.synth.set({ oscillator: { type: newWave }});
+                document.querySelectorAll('.wave-button').forEach(btn => {
+                    btn.classList.remove('bg-indigo-600', 'text-white');
+                    btn.classList.add('bg-gray-700/80', 'hover:bg-gray-700');
+                });
+                button.classList.add('bg-indigo-600', 'text-white');
+                button.classList.remove('bg-gray-700/80', 'hover:bg-gray-700');
+            }
+            
+            updateEffects() {
+                if (!this.state.isInitialized) return;
+                this.state.effects.reverb.wet.value = parseInt(this.elements.reverbSlider.value) / 100;
+                this.state.effects.delay.feedback.value = parseInt(this.elements.delaySlider.value) / 110;
+                
+                // Logarithmic mapping for filter frequency
+                const cutoffValue = parseInt(this.elements.filterCutoffSlider.value) / 100; // 0 to 1
+                const minFreq = 40;
+                const maxFreq = 20000;
+                this.state.effects.filter.frequency.value = minFreq * Math.pow(maxFreq / minFreq, cutoffValue);
+
+                this.state.effects.filter.Q.value = (parseInt(this.elements.filterResonanceSlider.value) / 100) * 20;
+            }
+
+            async togglePlayback() {
+                if (!this.state.isInitialized) {
+                    await Tone.start();
+                    this.setupAudio();
+                }
+                this.state.isPlaying = !this.state.isPlaying;
+                if (this.state.isPlaying) {
+                    this.parseAndPlay();
+                    this.elements.playText.textContent = 'Stop';
+                    this.elements.playIcon.innerHTML = this.stopIconSVG;
+                    this.elements.pulseIndicator.classList.add('playing');
+                } else {
+                    this.stopMusic();
+                    this.elements.playText.textContent = 'Play';
+                    this.elements.playIcon.innerHTML = this.playIconSVG;
+                    this.elements.pulseIndicator.classList.remove('playing');
+                }
+            }
+
+            parseAndPlay() {
+                this._resetSequencer();
+                this._parseAndSchedule();
+            }
+
+            _resetSequencer() {
+                this.state.sequences.forEach(seq => { seq.stop().dispose(); });
+                this.state.sequences.clear();
+                Tone.Transport.cancel(0);
+                this.elements.instrumentIndicators.innerHTML = '';
+            }
+
+            _parseAndSchedule() {
+                const code = this.elements.codeEditor.value;
+                const lines = code.split('\n').filter(line => line.trim() && !line.trim().startsWith('--'));
+                let longestPattern = 0;
+
+                lines.forEach(line => {
+                    const [instrumentName, patternStr] = line.split(':');
+                    if (!instrumentName || !patternStr) return;
+                    const instrument = instrumentName.trim().toLowerCase();
+                    if (!this.state.synths[instrument]) return;
+
+                    this._createIndicator(instrument);
+                    const pattern = this._parsePattern(patternStr, instrument);
+                    if (pattern.length > longestPattern) longestPattern = pattern.length;
+
+                    const seq = new Tone.Sequence((time, value) => {
+                        if (value) this._triggerNote(instrument, value, time);
+                    }, pattern, '16n').start(0);
+                    this.state.sequences.set(instrument, seq);
+                });
+
+                if (longestPattern > 0) {
+                    Tone.Transport.loop = true;
+                    Tone.Transport.loopEnd = `${longestPattern}*16n`;
+                    Tone.Transport.scheduleRepeat(time => {
+                        Tone.Draw.schedule(() => this._updateCaret(), time);
+                    }, '128n');
+                }
+                Tone.Transport.start();
+            }
+
+            _parsePattern(patternStr, instrument) {
+                const pattern = [];
+                let i = 0;
+                while (i < patternStr.length) {
+                    const char = patternStr[i];
+                    let note = null;
+                    let consumed = 1;
+
+                    if (char === '(') {
+                        const endIndex = patternStr.indexOf(')', i);
+                        if (endIndex !== -1) {
+                            const content = patternStr.substring(i + 1, endIndex);
+                            note = { random: content.split('|') };
+                            consumed = endIndex - i + 1;
+                        }
+                    } else if (char === '?' && pattern.length > 0) {
+                        const lastNote = pattern[pattern.length - 1];
+                        let probability = 0.5;
+                        const probChar = patternStr[i + 1];
+                        if (probChar && /[1-9]/.test(probChar)) {
+                            probability = parseInt(probChar, 10) / 10;
+                            consumed = 2;
+                        }
+                        note = Math.random() < probability ? lastNote : null;
+                    } else if (instrument === 'synth' || instrument === 'bass') {
+                        const noteMatch = patternStr.substring(i).match(/^([A-G][b#]?\d)(?::(\d+))?/);
+                        if (noteMatch) {
+                            note = { note: noteMatch[1], duration: noteMatch[2] ? `${noteMatch[2]}n` : '16n' };
+                            consumed = noteMatch[0].length;
+                        }
+                    } else { // Drums
+                        if (/[1-9]/.test(char)) note = { velocity: parseInt(char) / 9 };
+                    }
+                    
+                    pattern.push(note);
+                    i += consumed;
+                }
+                return pattern;
+            }
+
+            _triggerNote(instrument, value, time) {
+                let finalValue = value;
+                if (value.random) {
+                    const randomNote = value.random[Math.floor(Math.random() * value.random.length)];
+                    finalValue = { note: randomNote, duration: '16n' }; // Default duration for random notes
+                }
+
+                if (instrument === 'synth') this.state.synths.synth.triggerAttackRelease(finalValue.note, finalValue.duration, time);
+                else if (instrument === 'bass') this.state.synths.bass.triggerAttackRelease(finalValue.note, finalValue.duration, time);
+                else this.state.synths[instrument].triggerAttackRelease('C1', '8n', time, finalValue.velocity);
+                
+                Tone.Draw.schedule(() => {
+                    const indicator = document.getElementById(`indicator-${instrument}`);
+                    if (indicator) {
+                        indicator.classList.add('active');
+                        setTimeout(() => indicator.classList.remove('active'), 100);
+                    }
+                }, time);
+            }
+            
+            _createIndicator(instrument) {
+                const indicatorWrapper = document.createElement('div');
+                indicatorWrapper.className = 'flex items-center space-x-2';
+                const indicatorDot = document.createElement('div');
+                indicatorDot.id = `indicator-${instrument}`;
+                indicatorDot.className = 'note-indicator w-2 h-2 rounded-full bg-gray-600';
+                const indicatorLabel = document.createElement('span');
+                indicatorLabel.className = 'font-mono text-xs text-gray-400';
+                indicatorLabel.textContent = instrument.substring(0, 5);
+                indicatorWrapper.appendChild(indicatorDot);
+                indicatorWrapper.appendChild(indicatorLabel);
+                this.elements.instrumentIndicators.appendChild(indicatorWrapper);
+            }
+
+            _updateCaret() {
+                const editorWidth = this.elements.codeEditor.clientWidth - 32; // Account for padding
+                if (editorWidth > 0) {
+                    const progress = Tone.Transport.progress;
+                    this.elements.progressCaret.style.transform = `translateX(${progress * editorWidth}px)`;
+                }
+            }
+            
+            stopMusic() {
+                this._resetSequencer();
+                Tone.Transport.stop();
+                Tone.Transport.position = 0;
+                this.elements.progressCaret.style.transform = `translateX(0px)`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new CodeBeat();
+        });
+    </script>
+</body>
+</html>
+
