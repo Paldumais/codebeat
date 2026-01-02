@@ -1,22 +1,31 @@
 CodeBeat - A Generative Music Sequencer
+
 CodeBeat is a browser-based beat maker that lets you craft dynamic, generative rhythms and melodies using a simple, text-based syntax. Built with HTML, Tailwind CSS, and Tone.js, it offers a unique way to experiment with music production directly in your web browser.
 
-Features
-Live-Coding Sequencer: Edit patterns in real-time and hear your changes instantly.
+## Features
 
-Powerful Generative Tools: Use probabilistic triggers (?3 for 30% chance) and random note selection ((C4|E4|G4)) to create ever-evolving patterns.
+**Live-Coding Sequencer**: Edit patterns in real-time and hear your changes instantly.
 
-Six Built-in Instruments: Includes Kick, Snare, Hihat, Tom, a polyphonic Synth, and a monophonic Bass synth.
+**Powerful Generative Tools**: Use probabilistic triggers (`?3` for 30% chance) and random note selection (`(C4|E4|G4)`) to create ever-evolving patterns.
 
-Full Suite of Master Controls: Adjust BPM, Swing, and sculpt your sound with master effects like Reverb, Delay, and a resonant Low-Pass Filter.
+**Six Built-in Instruments**: Includes Kick, Snare, Hihat, Tom, a polyphonic Synth, and a monophonic Bass synth.
 
-Customizable Synth Engine: Choose from Saw, Square, Sine, and Triangle waveforms for the main synth.
+**Full Suite of Master Controls**: Adjust BPM, Swing, and sculpt your sound with master effects like Reverb, Delay, and a resonant Low-Pass Filter.
 
-Presets and Saving: Load built-in presets to get started quickly, or save your own unique beats to your browser's local storage.
+**Customizable Synth Engine**: Choose from Saw, Square, Sine, and Triangle waveforms for the main synth.
 
-Modern UI: A sleek, responsive interface with visual indicators that flash with each note played.
+**Presets and Saving**: Load built-in presets to get started quickly, or save your own unique beats to your browser's local storage.
 
-How It Works
+**Modern UI**: A sleek, responsive interface with visual indicators that flash with each note played.
+
+**Keyboard Shortcuts**: 
+- **Ctrl/Cmd + Enter**: Toggle Play/Stop
+- **Ctrl/Cmd + S**: Save custom preset
+
+**Accessibility**: Full keyboard navigation, ARIA labels, and screen reader support.
+
+## How It Works
+
 Define patterns for each instrument using an intuitive syntax.
 
 Example:
@@ -26,11 +35,28 @@ kick: 9--5?2--9--5?8
 snare: ----9?6-------
 synth: (C4|E4|G4|A4)---(C4|E4|G4)---
 
-Drums: Use numbers 1-9 for velocity and ? for probability.
+**Drums**: Use numbers 1-9 for velocity and `?` for probability.
 
-Synths: Define notes like C4, specify duration with C4:8, or create random melodies with (C4|E4|G4).
+**Synths**: Define notes like `C4`, specify duration with `C4:8`, or create random melodies with `(C4|E4|G4)`.
 
-Tech Stack
-Frontend: HTML5, Tailwind CSS
+## Tech Stack
 
-Audio & Sequencing: JavaScript with the powerful Tone.js library for Web Audio API management.
+**Frontend**: HTML5, Tailwind CSS (CDN)
+
+**Audio & Sequencing**: JavaScript with the powerful Tone.js library for Web Audio API management.
+
+**Architecture**: Modular ES6+ JavaScript for maintainability without build tools.
+
+## Development
+
+CodeBeat is designed to work as a static site without any build tooling. Simply open `index.html` in a modern web browser or serve it with any static file server.
+
+The codebase is organized into modular ES6 JavaScript files:
+- `assets/js/app.js` - Main application logic
+- `assets/js/parser.js` - Pattern parsing and syntax validation
+- `assets/js/audio.js` - Tone.js audio engine and synthesis
+- `assets/js/ui.js` - UI helpers and DOM manipulation
+
+## License
+
+See LICENSE file for details.
