@@ -162,8 +162,8 @@ bass: C2:16-C2:16-C2:16-C2:16-C2:16-C2:16-C2:16-C2:16`,
         
         setupAccordionKeyboard(this.elements.accordionContainer);
         
-        // Keyboard shortcuts
-        setupKeyboardShortcuts({
+        // Keyboard shortcuts (only setup once)
+        this.keyboardHandler = setupKeyboardShortcuts({
             togglePlay: () => this.togglePlayback(),
             save: () => this.saveCustomPreset()
         });

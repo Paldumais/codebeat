@@ -138,7 +138,7 @@ export function showFeedback(element, message, duration = 2000) {
     setTimeout(() => {
         feedback.style.opacity = '0';
         setTimeout(() => {
-            document.body.removeChild(feedback);
+            feedback.remove();
         }, 300);
     }, duration);
 }
@@ -173,10 +173,12 @@ export function toggleAccordion(header) {
 
 /**
  * Setup keyboard event handlers
+ * Note: Should only be called once during initialization to avoid duplicate listeners
  * @param {object} handlers - Object with handler functions
  */
 export function setupKeyboardShortcuts(handlers) {
-    document.addEventListener('keydown', (e) => {
+    // Use a named function so we can potentially remove it later
+    const keyboardHandler = (e) => {
         // Ctrl/Cmd + Enter: Toggle playback
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             e.preventDefault();
@@ -188,7 +190,12 @@ export function setupKeyboardShortcuts(handlers) {
             e.preventDefault();
             if (handlers.save) handlers.save();
         }
-    });
+    };
+    
+    document.addEventListener('keydown', keyboardHandler);
+    
+    // Return the handler so it can be removed if needed
+    return keyboardHandler;
 }
 
 /**
@@ -242,8 +249,10 @@ export function updateWaveformButtons(selectedButton) {
     document.querySelectorAll('.wave-button').forEach(btn => {
         btn.classList.remove('bg-indigo-600', 'text-white');
         btn.classList.add('bg-gray-700/80', 'hover:bg-gray-700');
+        btn.setAttribute('aria-pressed', 'false');
     });
     
     selectedButton.classList.add('bg-indigo-600', 'text-white');
     selectedButton.classList.remove('bg-gray-700/80', 'hover:bg-gray-700');
+    selectedButton.setAttribute('aria-pressed', 'true');
 }
